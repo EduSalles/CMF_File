@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANALISE ARQUIVO CMF - Caixa Economica Federal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .window {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .window h3 {
+            margin-top: 0;
+        }
+        #error {
+            color: red;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ANALISE ARQUIVO CMF - Caixa Economica Federal</h1>
+    <input type="file" id="fileInput" accept=".txt">
+    <div id="error"></div>
+    <div id="contratos" class="window">
+        <h3>CONTRATOS NO ARQUIVO</h3>
+        <p id="contratosCount"></p>
+        <ul id="contratosList"></ul>
+    </div>
+    <div id="tiposLancamentos" class="window">
+        <h3>TIPOS DE LANCAMENTOS</h3>
+        <p id="tiposLancamentosCount"></p>
+        <ul id="tiposLancamentosList"></ul>
+    </div>
+    <div id="tiposSituacoes" class="window">
+        <h3>TIPOS DE SITUACOES</h3>
+        <p id="tiposSituacoesCount"></p>
+        <ul id="tiposSituacoesList"></ul>
+    </div>
+    <div id="processado" class="window">
+        <h3>ARQUIVO FORMATADO</h3>
+        <pre id="processadoContent"></pre>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const lines = e.target.result.split('\n');
+                    if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
+                        document.getElementById('error').textContent = "Arquivo n?o ? do tipo CMF da Caixa Econ?mica Federal";
+                        clearWindows();
+                    } else {
+                        document.getElementById('error').textContent = "";
+                        processLines(lines);
+                        processFileContent(e.target.result);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function processLines(lines) {
+            const contratosSet = new Set();
+            const tiposLancamentosSet = new Set();
+            const tiposSituacoesSet = new Set();
+
+            lines.forEach(line => {
+                if (line.length >= 13 && /^\d+$/.test(line.substring(1, 13))) {
+                    contratosSet.add(line.substring(1, 13).trim());
+                }
+                if (line.length >= 39 && line.charAt(20) === '/' && line.charAt(31) === '/') {
+                    tiposLancamentosSet.add(line.substring(38, 75).trim());
+                }
+                if (line.length >= 75 && /^\d+$/.test(line.substring(15, 20)) && line.charAt(51) === ',' && /^\d+$/.test(line.substring(52, 54))) {
+                    tiposSituacoesSet.add(line.substring(55, 75).trim());
+                }
+            });
+
+            updateWindow('contratos', contratosSet);
+            updateWindow('tiposLancamentos', tiposLancamentosSet);
+            updateWindow('tiposSituacoes', tiposSituacoesSet);
+        }
+
+        function updateWindow(id, dataSet) {
+            const listElement = document.getElementById(`${id}List`);
+            const countElement = document.getElementById(`${id}Count`);
+            listElement.innerHTML = '';
+            dataSet.forEach(item => {
+                if (item.trim() !== '') {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    listElement.appendChild(li);
+                }
+            });
+            countElement.textContent = `Quantidade total de Registros: ${dataSet.size}`;
+        }
+
+        function clearWindows() {
+            ['contratos', 'tiposLancamentos', 'tiposSituacoes', 'processado'].forEach(id => {
+                document.getElementById(`${id}List`) ? document.getElementById(`${id}List`).innerHTML = '' : null;
+                document.getElementById(`${id}Count`) ? document.getElementById(`${id}Count`).textContent = '' : null;
+                document.getElementById(`${id}Content`) ? document.getElementById(`${id}Content`).textContent = '' : null;
+            });
+        }
+
+        function processFileContent(content) {
+            //let processedContent = content.replace(/\r\n/g, '   ').replace(/\n\s{2}/g, '   ');
+              let processedContent = content.replace(/\x0D\x0A\x20\x20/g, '   ').replace(/\x0A\x20\x20/g, '   ');
+            
+            const lines = processedContent.split('\n');
+            const filteredLines = lines.filter((line, index) => {
+                return index === 0 || 
+                       (line.trim() !== '' && 
+                       !line.startsWith(" TOTAL DT.REM") && 
+                       !line.startsWith(" TOTAIS") && 
+                       !line.startsWith(" CONTRATO") && 
+                       !line.includes("Emitente"));
+            });
+            document.getElementById('processadoContent').textContent = filteredLines.join('\n');
+        }
+    </script>
+</body>
+</html>
