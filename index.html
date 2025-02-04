@@ -9,15 +9,38 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
         .window {
             border: 1px solid #ccc;
             padding: 10px;
-            margin-bottom: 20px;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
         }
         .window h3 {
             margin-top: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            cursor: pointer;
+        }
+        .count {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 5px;
+            display: block;
         }
         #error {
             color: red;
@@ -30,32 +53,50 @@
     <h1>ANALISE ARQUIVO CMF - Caixa Economica Federal</h1>
     <input type="file" id="fileInput" accept=".txt">
     <div id="error"></div>
-    <div id="contratos" class="window">
-        <h3>CONTRATOS NO ARQUIVO</h3>
-        <p id="contratosCount"></p>
-        <ul id="contratosList"></ul>
+    <div class="grid-container">
+        <div id="contratos" class="window">
+            <h3>CONTRATOS NO ARQUIVO</h3>
+            <p class="count" id="contratosCount">Quantidade total de Registros: 0</p>
+            <table id="contratosTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('contratosTable', 0)">Contratos</th>
+                    </tr>
+                </thead>
+                <tbody id="contratosList"></tbody>
+            </table>
+        </div>
+        <div id="tiposLancamentos" class="window">
+            <h3>TIPOS DE LANCAMENTOS NO ARQUIVO</h3>
+            <p class="count" id="tiposLancamentosCount">Quantidade total de Registros: 0</p>
+            <table id="tiposLancamentosTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('tiposLancamentosTable', 0)">Lancamentos</th>
+                    </tr>
+                </thead>
+                <tbody id="tiposLancamentosList"></tbody>
+            </table>
+        </div>
+        <div id="tiposSituacoes" class="window">
+            <h3>TIPOS DE SITUACOES NO ARQUIVO</h3>
+            <p class="count" id="tiposSituacoesCount">Quantidade total de Registros: 0</p>
+            <table id="tiposSituacoesTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('tiposSituacoesTable', 0)">Situacoes</th>
+                    </tr>
+                </thead>
+                <tbody id="tiposSituacoesList"></tbody>
+            </table>
+        </div>
     </div>
-    
-    <div id="tiposLancamentos" class="window">
-        <h3>TIPOS DE LANCAMENTOS</h3>
-        <p id="tiposLancamentosCount"></p>
-        <ul id="tiposLancamentosList"></ul>
-    </div>
-    
-    <div id="tiposSituacoes" class="window">
-        <h3>TIPOS DE SITUACOES</h3>
-        <p id="tiposSituacoesCount"></p>
-        <ul id="tiposSituacoesList"></ul>
-    </div>
-    
     <div id="processado" class="window">
         <h3>ARQUIVO FORMATADO</h3>
         <pre id="processadoContent"></pre>
         <button onclick="exportToCsv()">Exportar para CSV</button>
     </div>
-    
     <a href="Remove_numeracao_pagina_arqCMF.html">Remover Numeracao de Pagina no arquivo CMF</a>
-
     <script>
         document.getElementById('fileInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -64,19 +105,19 @@
                 reader.onload = function(e) {
                     const lines = e.target.result.split('\n');
                     
-                      if (lines[61].startsWith('                                      00')) {
+                    if (lines[61].startsWith('                                      00')) {
                         document.getElementById('error').textContent = "Arquivo tem paginacao, favor corrigir!";
                         clearWindows();
-                     } else {
-
-                    if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
-                        document.getElementById('error').textContent = "Arquivo nao eh do tipo CMF da Caixa Econ?mica Federal";
-                        clearWindows();
                     } else {
-                        document.getElementById('error').textContent = "";
-                        processLines(lines);
-                        processFileContent(e.target.result);
-                    }}
+                        if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
+                            document.getElementById('error').textContent = "Arquivo nao eh do tipo CMF da Caixa Econ?mica Federal";
+                            clearWindows();
+                        } else {
+                            document.getElementById('error').textContent = "";
+                            processLines(lines);
+                            processFileContent(e.target.result);
+                        }
+                    }
                 };
                 reader.readAsText(file);
             }
@@ -86,7 +127,6 @@
             const contratosSet = new Set();
             const tiposLancamentosSet = new Set();
             const tiposSituacoesSet = new Set();
-
             lines.forEach(line => {
                 if (line.length >= 13 && /^\d+$/.test(line.substring(1, 13))) {
                     contratosSet.add(line.substring(1, 13).trim());
@@ -98,35 +138,36 @@
                     tiposSituacoesSet.add(line.substring(55, 75).trim());
                 }
             });
-
-            updateWindow('contratos', contratosSet);
-            updateWindow('tiposLancamentos', tiposLancamentosSet);
-            updateWindow('tiposSituacoes', tiposSituacoesSet);
+            updateWindow('contratos', Array.from(contratosSet));
+            updateWindow('tiposLancamentos', Array.from(tiposLancamentosSet));
+            updateWindow('tiposSituacoes', Array.from(tiposSituacoesSet));
         }
 
-        function updateWindow(id, dataSet) {
+        function updateWindow(id, data) {
             const listElement = document.getElementById(`${id}List`);
             const countElement = document.getElementById(`${id}Count`);
             listElement.innerHTML = '';
-            dataSet.forEach(item => {
+            data.sort().forEach(item => {
                 if (item.trim() !== '') {
-                    const li = document.createElement('li');
-                    li.textContent = item;
-                    listElement.appendChild(li);
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.textContent = item;
+                    tr.appendChild(td);
+                    listElement.appendChild(tr);
                 }
             });
-            countElement.textContent = `Quantidade total de Registros: ${dataSet.size}`;
+            countElement.textContent = `Quantidade total de Registros: ${data.length}`;
         }
 
         function clearWindows() {
-            ['contratos', 'tiposLancamentos', 'tiposSituacoes', 'processado'].forEach(id => {
-                document.getElementById(`${id}List`) ? document.getElementById(`${id}List`).innerHTML = '' : null;
-                document.getElementById(`${id}Count`) ? document.getElementById(`${id}Count`).textContent = '' : null;
-                document.getElementById(`${id}Content`) ? document.getElementById(`${id}Content`).textContent = '' : null;
+            ['contratos', 'tiposLancamentos', 'tiposSituacoes'].forEach(id => {
+                document.getElementById(`${id}List`).innerHTML = '';
+                document.getElementById(`${id}Count`).textContent = 'Quantidade total de Registros: 0';
             });
+            document.getElementById('processadoContent').textContent = '';
         }
 
-  function processFileContent(content) {
+        function processFileContent(content) {
             let processedContent = content.replace(/\x0D\x0A\x20\x20/g, '   ').replace(/\x0A\x20\x20/g, '   ');
             const lines = processedContent.split('\n');
             const filteredLines = lines.filter((line, index) => {
@@ -140,7 +181,7 @@
             
             document.getElementById('processadoContent').textContent = filteredLines.join('\n');
         }
-        
+
         function insertSemicolons(line) {
             const positions = [15, 26, 38, 76, 94, 120, 134, 154];
             let modifiedLine = line;
@@ -161,7 +202,25 @@
             link.href = URL.createObjectURL(blob);
             link.download = "arquivo_processado.csv";
             link.click();
-        }        
+        }
+
+        function sortTable(tableId, column) {
+            const table = document.getElementById(tableId);
+            const rows = Array.from(table.rows).slice(1);
+            let sortedRows = rows.sort((a, b) => {
+                const aText = a.cells[column].textContent.trim();
+                const bText = b.cells[column].textContent.trim();
+                return aText.localeCompare(bText, undefined, { numeric: true });
+            });
+            const isAscending = table.getAttribute('data-sort') === 'asc';
+            if (!isAscending) {
+                sortedRows = sortedRows.reverse();
+            }
+            table.setAttribute('data-sort', isAscending ? 'desc' : 'asc');
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+            sortedRows.forEach(row => tbody.appendChild(row));
+        }
     </script>
 </body>
 </html>
