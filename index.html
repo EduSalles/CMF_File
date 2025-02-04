@@ -34,20 +34,25 @@
         <p id="contratosCount"></p>
         <ul id="contratosList"></ul>
     </div>
+    
     <div id="tiposLancamentos" class="window">
         <h3>TIPOS DE LANCAMENTOS</h3>
         <p id="tiposLancamentosCount"></p>
         <ul id="tiposLancamentosList"></ul>
     </div>
+    
     <div id="tiposSituacoes" class="window">
         <h3>TIPOS DE SITUACOES</h3>
         <p id="tiposSituacoesCount"></p>
         <ul id="tiposSituacoesList"></ul>
     </div>
+    
     <div id="processado" class="window">
         <h3>ARQUIVO FORMATADO</h3>
         <pre id="processadoContent"></pre>
+        <button onclick="exportToCsv()">Exportar para CSV</button>
     </div>
+    
     <a href="Remove_numeracao_pagina_arqCMF.html">Remover Numeracao de Pagina no arquivo CMF</a>
 
     <script>
@@ -57,14 +62,20 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const lines = e.target.result.split('\n');
+                    
+                      if (lines[61].startsWith('                                      00')) {
+                        document.getElementById('error').textContent = "Arquivo tem paginacao, favor corrigir!";
+                        clearWindows();
+                     } else {
+
                     if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
-                        document.getElementById('error').textContent = "Arquivo n?o ? do tipo CMF da Caixa Econ?mica Federal";
+                        document.getElementById('error').textContent = "Arquivo nao eh do tipo CMF da Caixa Econ?mica Federal";
                         clearWindows();
                     } else {
                         document.getElementById('error').textContent = "";
                         processLines(lines);
                         processFileContent(e.target.result);
-                    }
+                    }}
                 };
                 reader.readAsText(file);
             }
@@ -114,10 +125,8 @@
             });
         }
 
-        function processFileContent(content) {
-            //let processedContent = content.replace(/\r\n/g, '   ').replace(/\n\s{2}/g, '   ');
-              let processedContent = content.replace(/\x0D\x0A\x20\x20/g, '   ').replace(/\x0A\x20\x20/g, '   ');
-            
+  function processFileContent(content) {
+            let processedContent = content.replace(/\x0D\x0A\x20\x20/g, '   ').replace(/\x0A\x20\x20/g, '   ');
             const lines = processedContent.split('\n');
             const filteredLines = lines.filter((line, index) => {
                 return index === 0 || 
@@ -126,9 +135,32 @@
                        !line.startsWith(" TOTAIS") && 
                        !line.startsWith(" CONTRATO") && 
                        !line.includes("Emitente"));
-            });
+            }).map(line => insertSemicolons(line));
+            
             document.getElementById('processadoContent').textContent = filteredLines.join('\n');
         }
+        
+        function insertSemicolons(line) {
+            const positions = [15, 26, 38, 76, 94, 120, 134, 154];
+            let modifiedLine = line;
+            for (let i = positions.length - 1; i >= 0; i--) {
+                if (positions[i] < modifiedLine.length) {
+                    modifiedLine = modifiedLine.slice(0, positions[i]) + ';' + modifiedLine.slice(positions[i]);
+                }
+            }
+            return modifiedLine;
+        }
+
+        function exportToCsv() {
+            const textContent = document.getElementById('processadoContent').textContent;
+            const csvContent = textContent.split('\n').map(line => line.replace(/\t/g, ',')).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "arquivo_processado.csv";
+            link.click();
+        }        
     </script>
 </body>
 </html>
