@@ -46,7 +46,22 @@
             color: red;
             margin-bottom: 20px;
         }
+        #pivotGrid {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
     </style>
+    <!-- Bibliotecas necessárias -->
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- jQuery UI (com sortable) -->
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Tema para jQuery UI (opcional, mas recomendado) -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <!-- PivotTable.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.js"></script>
 </head>
 <meta name="google-site-verification" content="r8pksbys1t4MEACYV-U_6T8kwXfDkOI1W2R749DhOoE" />
 <body>
@@ -67,7 +82,7 @@
             </table>
         </div>
         <div id="tiposLancamentos" class="window">
-            <h3>TIPOS DE LANCAMENTOS NO ARQUIVO</h3>
+            <h3>TIPOS DE LANCAMENTOS</h3>
             <p class="count" id="tiposLancamentosCount">Quantidade total de Registros: 0</p>
             <table id="tiposLancamentosTable">
                 <thead>
@@ -79,7 +94,7 @@
             </table>
         </div>
         <div id="tiposSituacoes" class="window">
-            <h3>TIPOS DE SITUACOES NO ARQUIVO</h3>
+            <h3>TIPOS DE SITUAÇOES</h3>
             <p class="count" id="tiposSituacoesCount">Quantidade total de Registros: 0</p>
             <table id="tiposSituacoesTable">
                 <thead>
@@ -96,7 +111,12 @@
         <pre id="processadoContent"></pre>
         <button onclick="exportToCsv()">Exportar para CSV</button>
     </div>
-    <a href="Remove_numeracao_pagina_arqCMF.html">Remover Numeracao de Pagina no arquivo CMF</a>
+    <a href="Remove_numeracao_pagina_arqCMF.html">Remover Numeracao de Paginas no arquivo CMF</a>
+    <div id="pivotGrid">
+        <h3>** ANALISE DINAMICA ** </h3>
+        <div id="pivotOutput"></div>
+    </div>
+   
     <script>
         document.getElementById('fileInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -106,11 +126,11 @@
                     const lines = e.target.result.split('\n');
                     
                     if (lines[61].startsWith('                                      00')) {
-                        document.getElementById('error').textContent = "Arquivo tem paginacao, favor corrigir!";
+                        document.getElementById('error').textContent = "Arquivo tem paginação, favor corrigir!";
                         clearWindows();
                     } else {
                         if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
-                            document.getElementById('error').textContent = "Arquivo nao eh do tipo CMF da Caixa Econ?mica Federal";
+                            document.getElementById('error').textContent = "Arquivo não é do tipo CMF da Caixa Econômica Federal";
                             clearWindows();
                         } else {
                             document.getElementById('error').textContent = "";
@@ -119,7 +139,7 @@
                         }
                     }
                 };
-                reader.readAsText(file);
+                reader.readAsText(file, 'UTF-8'); // Garantir leitura em UTF-8
             }
         });
 
@@ -165,6 +185,7 @@
                 document.getElementById(`${id}Count`).textContent = 'Quantidade total de Registros: 0';
             });
             document.getElementById('processadoContent').textContent = '';
+            document.getElementById('pivotOutput').innerHTML = ''; // Limpar Pivot Grid
         }
 
         function processFileContent(content) {
@@ -180,6 +201,25 @@
             }).map(line => insertSemicolons(line));
             
             document.getElementById('processadoContent').textContent = filteredLines.join('\n');
+
+            // Processar dados para o Pivot Grid
+            const headers = filteredLines[0].split(';').map(header => header.trim());
+            const data = filteredLines.slice(1).map(line => {
+                const values = line.split(';');
+                const row = {};
+                headers.forEach((header, index) => {
+                    let value = values[index] ? values[index].trim() : '';
+                    // Formatar o campo VALOR
+                    if (header === "VALOR") {
+                        value = formatValor(value);
+                    }
+                    row[header] = value;
+                });
+                return row;
+            }).filter(row => Object.values(row).some(value => value)); // Remover linhas vazias
+
+            // Renderizar Pivot Grid
+            renderPivotGrid(data, headers);
         }
 
         function insertSemicolons(line) {
@@ -220,6 +260,36 @@
             const tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
             sortedRows.forEach(row => tbody.appendChild(row));
+        }
+        function renderPivotGrid(data, headers) {
+            try {
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error("Nenhum dado disponível para renderização.");
+                }
+
+                // Verificar se há colunas válidas
+                if (!headers || headers.length === 0) {
+                    throw new Error("Os dados fornecidos não contêm cabeçalhos válidos.");
+                }
+
+                // Exibir os dados no console para depuração
+                console.log("Dados para o Pivot Grid:", data);
+
+                $(document.getElementById('pivotOutput')).pivotUI(data, {
+                    rows: [headers[0]], // Use a primeira coluna como linha
+                    cols: [headers[1]], // Use a segunda coluna como coluna
+                    aggregatorName: "Sum",
+                    rendererName: "Table"
+                });
+            } catch (error) {
+                console.error("Erro ao renderizar Pivot Grid:", error);
+                document.getElementById('pivotOutput').innerHTML = `<p>Ocorreu um erro ao carregar o Pivot Grid: ${error.message}</p>`;
+            }
+        }
+
+        function formatValor(valor) {
+            // Substituir pontos por nada e vírgula por ponto
+            return valor.replace(/\./g, '').replace(',', '.');
         }
     </script>
 </body>
