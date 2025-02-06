@@ -276,8 +276,9 @@
                 console.log("Dados para o Pivot Grid:", data);
 
                 $(document.getElementById('pivotOutput')).pivotUI(data, {
-                    rows: [headers[0]], // Use a primeira coluna como linha
-                    cols: [headers[1]], // Use a segunda coluna como coluna
+                    rows: [headers[0],headers[7]], // Use a primeira coluna como linha
+                    cols: [headers[3]], // Use a segunda coluna como coluna
+                    vals: [headers[6]], 
                     aggregatorName: "Sum",
                     rendererName: "Table"
                 });
