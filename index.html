@@ -52,7 +52,7 @@
             padding: 10px;
         }
     </style>
-    <!-- Bibliotecas necess·rias -->
+    <!-- Bibliotecas necess√°rias -->
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- jQuery UI (com sortable) -->
@@ -62,6 +62,7 @@
     <!-- PivotTable.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/plotly_renderers.min.js"></script>
 </head>
 <meta name="google-site-verification" content="r8pksbys1t4MEACYV-U_6T8kwXfDkOI1W2R749DhOoE" />
 <body>
@@ -126,11 +127,11 @@
                     const lines = e.target.result.split('\n');
                     
                     if (lines[61].startsWith('                                      00')) {
-                        document.getElementById('error').textContent = "Arquivo tem paginaÁ„o, favor corrigir!";
+                        document.getElementById('error').textContent = "Arquivo tem pagina√ß√£o, favor corrigir!";
                         clearWindows();
                     } else {
                         if (lines.length > 0 && lines[0].substring(1, 9) !== "CONTRATO") {
-                            document.getElementById('error').textContent = "Arquivo n„o È do tipo CMF da Caixa EconÙmica Federal";
+                            document.getElementById('error').textContent = "Arquivo n√£o √© do tipo CMF da Caixa Econ√¥mica Federal";
                             clearWindows();
                         } else {
                             document.getElementById('error').textContent = "";
@@ -264,15 +265,15 @@
         function renderPivotGrid(data, headers) {
             try {
                 if (!Array.isArray(data) || data.length === 0) {
-                    throw new Error("Nenhum dado disponÌvel para renderizaÁ„o.");
+                    throw new Error("Nenhum dado dispon√≠vel para renderiza√ß√£o.");
                 }
 
-                // Verificar se h· colunas v·lidas
+                // Verificar se h√° colunas v√°lidas
                 if (!headers || headers.length === 0) {
-                    throw new Error("Os dados fornecidos n„o contÍm cabeÁalhos v·lidos.");
+                    throw new Error("Os dados fornecidos n√£o cont√™m cabe√ßalhos v√°lidos.");
                 }
 
-                // Exibir os dados no console para depuraÁ„o
+                // Exibir os dados no console para depura√ß√£o
                 console.log("Dados para o Pivot Grid:", data);
 
                 $(document.getElementById('pivotOutput')).pivotUI(data, {
@@ -289,7 +290,7 @@
         }
 
         function formatValor(valor) {
-            // Substituir pontos por nada e vÌrgula por ponto
+            // Substituir pontos por nada e v√≠rgula por ponto
             return valor.replace(/\./g, '').replace(',', '.');
         }
     </script>
